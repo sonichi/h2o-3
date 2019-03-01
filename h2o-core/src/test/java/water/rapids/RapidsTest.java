@@ -22,12 +22,13 @@ import java.util.Arrays;
 import java.util.Random;
 
 import static org.junit.Assert.*;
+import static water.TestUtil.*;
 import static water.rapids.Rapids.IllegalASTException;
 
 
 @RunWith(H2ORunner.class)
 @CloudSize(1)
-public class RapidsTest extends TestUtil {
+public class RapidsTest {
 
 
   @Test public void bigSlice() {
