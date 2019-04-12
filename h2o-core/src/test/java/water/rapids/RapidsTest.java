@@ -27,7 +27,7 @@ import static water.rapids.Rapids.IllegalASTException;
 
 
 @RunWith(H2ORunner.class)
-@CloudSize(1)
+@CloudSize(2)
 public class RapidsTest {
 
 
@@ -697,7 +697,6 @@ public class RapidsTest {
       Assert.assertNotNull(val);
       val.getFrame().delete();
     } finally {
-      fr.delete();
     }
   }
 
