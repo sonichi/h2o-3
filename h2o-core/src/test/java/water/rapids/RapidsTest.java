@@ -27,7 +27,7 @@ import static water.rapids.Rapids.IllegalASTException;
 
 
 @RunWith(H2ORunner.class)
-@CloudSize(2)
+@CloudSize(1)
 public class RapidsTest {
 
 
@@ -691,12 +691,16 @@ public class RapidsTest {
   }
 
   @Test public void test_frameKeyStartsWithNumber() {
-    Frame fr = parse_test_file(Key.make("123STARTSWITHDIGITS"), "smalldata/logreg/prostate.csv");
+
     try {
+      Scope.enter();
+      Frame frame = parse_test_file(Key.make("123STARTSWITHDIGITS"), "smalldata/logreg/prostate.csv");
+      Scope.track(frame);
       Val val = Rapids.exec("(cols_py 123STARTSWITHDIGITS 'ID')");
       Assert.assertNotNull(val);
       val.getFrame().delete();
     } finally {
+      Scope.exit();
     }
   }
 
