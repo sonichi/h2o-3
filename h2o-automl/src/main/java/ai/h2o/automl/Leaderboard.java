@@ -116,6 +116,7 @@ public class Leaderboard extends Keyed<Leaderboard> {
    */
   public Leaderboard(String project_name, EventLog eventLog, Frame leaderboardFrame, String sort_metric) {
     this._key = Key.make(idForProject(project_name));
+    Key.logInfo(_key);
     this.project_name = project_name;
     this.eventLog = eventLog;
     this.leaderboardFrame = leaderboardFrame;
@@ -204,6 +205,7 @@ public class Leaderboard extends Keyed<Leaderboard> {
     final Key<Model> newLeader[] = new Key[1]; // only set if there's a new leader
     final double newLeaderSortMetric[] = new double[1];
 
+    Log.info("***** Updating Leaderboard (outside) *****");
     new TAtomic<Leaderboard>() {
       @Override
       final public Leaderboard atomic(Leaderboard updating) {
@@ -212,11 +214,12 @@ public class Leaderboard extends Keyed<Leaderboard> {
           throw new H2OIllegalArgumentException("Trying to update a null leaderboard.");
         }
 
+        Log.info("***** Updating Leaderboard (inside) *****");
         final Key<Model>[] oldModels = updating.models;
         final Key<Model> oldLeader = (oldModels == null || 0 == oldModels.length) ? null : oldModels[0];
 
         // eliminate duplicates
-        Set<Key<Model>> uniques = new HashSet(oldModels.length + newModels.length);
+        Set<Key<Model>> uniques = new HashSet<>(oldModels.length + newModels.length);
         uniques.addAll(Arrays.asList(oldModels));
         uniques.addAll(Arrays.asList(newModels));
         updating.models = uniques.toArray(new Key[0]);
@@ -235,13 +238,22 @@ public class Leaderboard extends Keyed<Leaderboard> {
           // If leaderboardFrame is null, use default model metrics instead
           ModelMetrics mm = null;
           if (leaderboardFrame == null) {
+            Log.info("***** getting default metrics for model "+model._key+" *****");
             mm = ModelMetrics.defaultModelMetrics(model);
           } else {
             mm = ModelMetrics.getFromDKV(model, leaderboardFrame);
             if (mm == null) {
               //scores and magically stores the metrics where we're looking for it on the next line
-              model.score(leaderboardFrame).delete();
+              Log.info("***** scoring metrics from leaderboard frame for model "+model._key+" *****");
+              Frame toDelete = model.score(leaderboardFrame);
               mm = ModelMetrics.getFromDKV(model, leaderboardFrame);
+              try {
+                Key.logInfo(toDelete._key);
+                toDelete.delete();
+              } catch (Exception e) {
+                Log.err("Error when removing key "+toDelete._key);
+              }
+//              new RemoveCall(null, toDelete._key).invoke();
             }
           }
           if (mm != null) updating.leaderboard_set_metrics.put(mm._key, mm);
@@ -297,7 +309,7 @@ public class Leaderboard extends Keyed<Leaderboard> {
     }.invoke(this._key);
 
     // We've updated the DKV but not this instance, so:
-    Leaderboard updated = DKV.getGet(this._key);
+    Leaderboard updated = DKV.getGet(_key);
     this.models = updated.models;
     this.leaderboard_set_metrics = updated.leaderboard_set_metrics;
     this.sort_metrics = updated.sort_metrics;
